@@ -4,11 +4,30 @@
 	<meta charset="UTF-8">
 	<title>Twitter Threads</title>
 	<link rel="stylesheet" href="main.css">
+	<script type="text/javascript" src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 	<script type="text/javascript" src="https://platform.twitter.com/widgets.js"></script>
 	<script type="text/javascript" src="js/codebird.js"></script>
 	<script type="text/javascript" src="js/main.js"></script>
 </head>
 <body>
+<div id='navbarDiv'>
+	<nav class="navbar">
+		<ul>
+			<li><label>TweetID:
+				<input id="tweetID" type="text">
+			</label></li>
+			<li><label>Show parents:
+				<input id="showParents" type="checkbox">
+			</label></li>
+			<li><label>Trim replies:
+				<input id="removeChildless" type="checkbox">
+			</label></li>
+			<li>
+				<button>Go</button>
+			</li>
+		</ul>
+	</nav>
+</div>
 <div class="tree">
 	<ul id="root">
 	</ul>

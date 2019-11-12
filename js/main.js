@@ -1,87 +1,77 @@
 const cb = new Codebird;
-let firstList;
+let tweetRoot;
 
-window.onload = function get_body() {
-	firstList = document.getElementById("root");
-	const url = new URL(window.location);
-	const params = new URLSearchParams(url.search);
-	const originalTweetId = params.get("tweetID");
-	let parentTweet = createTweet(originalTweetId);
-	cb.setConsumerKey("mQKJucq6cfFRFifuRCIspMiYk", "kciZwLlq9tIBSRkSKMCJjA0VqKM2X1q8AMYiolNOTFpECZ7164");
-	if (!localStorage.getItem("bearer_token")) {
-		cb.__call("oauth2_token", {}, function (reply) {
-			if (reply) {
-				localStorage.setItem("bearer_token", reply.access_token);
-			}
-		});
-	} else {
-		cb.setBearerToken(localStorage.getItem("bearer_token"));
+class Tweet {
+	constructor(tweetID, parent, children) {
+		this.tweetID = tweetID;
+		this.parent = parent;
+		this.children = children || [];
 	}
-	cb.__call(
-			"statuses_show_ID",
-			"id=" + parentTweet.id,
-			function (reply) {
-				recursiveSearch(parentTweet, reply.user.screen_name, reply.id_str);
-			},
-			true //app_only_auth
-	);
-	// recursiveReplySearch(parentTweet).then(([parentTweet, screenName, sinceId]) => {
-	// 	recursiveSearch(parentTweet, screenName, sinceId);
-	// });
-};
+}
+
+function init() {
+	getUrlParams();
+	tweetRoot = new Tweet(document.getElementById("tweetID").value);
+	setCredentials();
+}
 
 function recursiveReplySearch(tweet) {
 	return new Promise((resolve) => {
 		cb.__call(
 				"statuses_show_ID",
 				"id=" + tweet.id,
-				function (reply) {
-					resolve([tweet, reply.user.screen_name, reply.id_str]);
-					if (reply.in_reply_to_status_id_str) {
-						let newFirstTweet = createTweet(reply.in_reply_to_status_id_str);
-						let ulElement = document.createElement("ul");
-						newFirstTweet.parentElement.appendChild(ulElement);
-						ulElement.appendChild(tweet.parentElement);
-						recursiveReplySearch(newFirstTweet);
-					}
-				},
+				null, //use promises instead of callbacks
 				true //app_only_auth
-		);
+		).then((reply) => {
+			resolve([tweet, reply.user.screen_name, reply.id_str]);
+			if (reply.in_reply_to_status_id_str) {
+				let newFirstTweet = createTweet(reply.in_reply_to_status_id_str);
+				let ulElement = document.createElement("ul");
+				newFirstTweet.parentElement.appendChild(ulElement);
+				ulElement.appendChild(tweet.parentElement);
+				recursiveReplySearch(newFirstTweet);
+			}
+		});
 	});
 }
 
 function recursiveSearch(parentTweet, screenName, sinceId, maxId) {
-	let params = {q: "(to:" + screenName + ")", since_id: sinceId, count: 100};
-	if (maxId) {
-		params.max_id = maxId;
-	}
+	return new Promise((resolve) => {
+		let params = {q: "(to:" + screenName + ")", since_id: sinceId, count: 100};
+		if (maxId) {
+			params.max_id = maxId;
+		}
 
-	cb.__call(
-			"search_tweets",
-			params,
-			function (reply) {
-				for (let tweet of reply.statuses) {
-					if (tweet.in_reply_to_status_id_str === parentTweet.id) {
-						const newTweet = createTweet(tweet.id_str, parentTweet);
-						recursiveSearch(newTweet, tweet.user.screen_name, tweet.id_str)
-					}
+		cb.__call(
+				"search_tweets",
+				params,
+				null, //use promises instead of callbacks
+				true //app_only_auth
+		).then((response) => {
+			let promises = [];
+			for (let tweet of response.reply.statuses) {
+				if (tweet.in_reply_to_status_id_str === parentTweet.tweetID) {
+					let newTweet = new Tweet(tweet.id_str, parentTweet);
+					parentTweet.children.push(newTweet);
+					promises.push(recursiveSearch(newTweet, tweet.user.screen_name, tweet.id_str));
 				}
-				if (reply.search_metadata.next_results) {
-					const newMaxId = reply.search_metadata.next_results.substring(
-							reply.search_metadata.next_results.lastIndexOf("max_id=") + 7,
-							reply.search_metadata.next_results.lastIndexOf("&q="));
-					recursiveSearch(parentTweet, screenName, sinceId, newMaxId);
-				}
-			},
-			true //app_only_auth
-	);
+			}
+			if (response.reply.search_metadata.next_results) {
+				const newMaxId = response.reply.search_metadata.next_results.substring(
+						response.reply.search_metadata.next_results.lastIndexOf("max_id=") + 7,
+						response.reply.search_metadata.next_results.lastIndexOf("&q="));
+				promises.push(recursiveSearch(parentTweet, screenName, sinceId, newMaxId));
+			}
+			Promise.all(promises).then(resolve);
+		});
+	});
 }
 
-function createTweet(tweetId, parentTweet) {
+function createTweet(tweetID, parentTweet) {
 	let ulElement;
 	let tweet = document.createElement("div");
 	if (!parentTweet) {
-		ulElement = firstList;
+		ulElement = document.getElementById("root");
 	} else {
 		for (let child of parentTweet.parentElement.children) {
 			if (child.tagName === "UL") {
@@ -95,14 +85,13 @@ function createTweet(tweetId, parentTweet) {
 	}
 	let root = document.createElement("li");
 	ulElement.appendChild(root);
-	tweet.id = tweetId;
+	tweet.id = tweetID;
 	tweet.className = "child";
 	root.appendChild(tweet);
 	twttr.widgets.createTweet(
-			tweetId, tweet,
+			tweetID, tweet,
 			{
 				conversation: "none",    // or all
-				linkColor: "#cc0000", // default is blue
 			});
 	let button = document.createElement("button");
 	button.textContent = "X";
@@ -117,10 +106,48 @@ function createTweet(tweetId, parentTweet) {
 	return tweet;
 }
 
-function showTweet(tweet) {
-	tweet.style.display = "inline-block";
+function renderTweets(tweet, DOMTweet) {
+	for (let child of tweet.children) {
+		if (tweet.children.length < 5 || child.children.length > 0) {
+			renderTweets(child, createTweet(child.tweetID, DOMTweet));
+		}
+	}
 }
 
-function hideTweet(tweet) {
-	tweet.style.display = "none";
+window.onload = () => {
+	init();
+	cb.__call(
+			"statuses_show_ID",
+			"id=" + tweetRoot.tweetID,
+			null, //use promises instead of callbacks
+			true //app_only_auth
+	).then((response) => {
+		return recursiveSearch(tweetRoot, response.reply.user.screen_name, response.reply.id_str);
+	}).then(() => {
+		renderTweets(tweetRoot, createTweet(tweetRoot.tweetID));
+	});
+	// recursiveReplySearch(parentTweet).then(([parentTweet, screenName, sinceId]) => {
+	// 	recursiveSearch(parentTweet, screenName, sinceId);
+	// });
+};
+
+function getUrlParams() {
+	const url = new URL(window.location);
+	const params = new URLSearchParams(url.search);
+	document.getElementById("tweetID").value = params.get("tweetID");
+	document.getElementById("showParents").value = params.get("showParents");
+	document.getElementById("removeChildless").value = params.get("removeChildless");
+}
+
+function setCredentials() {
+	cb.setConsumerKey("mQKJucq6cfFRFifuRCIspMiYk", "kciZwLlq9tIBSRkSKMCJjA0VqKM2X1q8AMYiolNOTFpECZ7164");
+	if (!localStorage.getItem("bearer_token")) {
+		cb.__call("oauth2_token", {}, function (reply) {
+			if (reply) {
+				localStorage.setItem("bearer_token", reply.access_token);
+			}
+		});
+	} else {
+		cb.setBearerToken(localStorage.getItem("bearer_token"));
+	}
 }
