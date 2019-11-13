@@ -11,6 +11,7 @@ body {
 	color: #ffffff;
 	background: #4679BD;
 	padding: 1em;
+	position: fixed;
 }
 
 #navbarDiv nav ul {
@@ -32,6 +33,10 @@ button {
 	border-radius: 1em;
 }
 /* ========== Tree CSS ========== */
+.tree {
+	margin-top: 5em;
+}
+
 .tree ul {
 	position: relative;
 	padding: 1em 0;
@@ -102,7 +107,7 @@ button {
 	height: 1em;
 }
 
-.tree li div {
+.tree li > div {
 	border: 1px solid #ccc;
 	padding: 0.5em 0.75em;
 	text-decoration: none;
@@ -113,14 +118,14 @@ button {
 	top: 1px;
 }
 
-.tree li div:hover, .tree li div:hover + ul li div {
-	background: #e9453f;
+.tree li > div:hover, .tree li > div:hover + ul li > div {
+	background: #96c8e9;
 	color: #fff;
-	border: 1px solid #e9453f;
+	border: 1px solid #96c8e9;
 }
 
-.tree li div:hover + ul li::after, .tree li div:hover + ul li::before, .tree li div:hover + ul::before, .tree li div:hover + ul ul::before {
-	border-color: #e9453f;
+.tree li > div:hover + ul li::after, .tree li > div:hover + ul li::before, .tree li > div:hover + ul::before, .tree li > div:hover + ul ul::before {
+	border-color: #96c8e9;
 }
 
 .child button {
@@ -139,10 +144,82 @@ button {
 	background: #4679BD;
 }
 
+/* ========== Button CSS ========== */
 button:hover {
 	background: #30588e;
 }
 
+/* ========== Tweet CSS ========== */
 .twitter-tweet {
 	max-width: 300px !important;
+}
+
+/* ========== Loading CSS ========== */
+.lds-grid {
+	display: inline-block;
+	position: relative;
+	width: 64px;
+	height: 64px;
+	padding: 0 !important;
+}
+.lds-grid div {
+	position: absolute;
+	width: 13px;
+	height: 13px;
+	border-radius: 50%;
+	background: #30588e;
+	animation: lds-grid 1.2s linear infinite;
+}
+.lds-grid div:nth-child(1) {
+	top: 6px;
+	left: 6px;
+	animation-delay: 0s;
+}
+.lds-grid div:nth-child(2) {
+	top: 6px;
+	left: 26px;
+	animation-delay: -0.4s;
+}
+.lds-grid div:nth-child(3) {
+	top: 6px;
+	left: 45px;
+	animation-delay: -0.8s;
+}
+.lds-grid div:nth-child(4) {
+	top: 26px;
+	left: 6px;
+	animation-delay: -0.4s;
+}
+.lds-grid div:nth-child(5) {
+	top: 26px;
+	left: 26px;
+	animation-delay: -0.8s;
+}
+.lds-grid div:nth-child(6) {
+	top: 26px;
+	left: 45px;
+	animation-delay: -1.2s;
+}
+.lds-grid div:nth-child(7) {
+	top: 45px;
+	left: 6px;
+	animation-delay: -0.8s;
+}
+.lds-grid div:nth-child(8) {
+	top: 45px;
+	left: 26px;
+	animation-delay: -1.2s;
+}
+.lds-grid div:nth-child(9) {
+	top: 45px;
+	left: 45px;
+	animation-delay: -1.6s;
+}
+@keyframes lds-grid {
+	0%, 100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
 }

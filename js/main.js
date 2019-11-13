@@ -17,24 +17,28 @@ function init() {
 
 function recursiveReplySearch(in_reply_to_status_id_str) {
 	tweetRoot = new Tweet(in_reply_to_status_id_str, undefined, [tweetRoot]);
-	return new Promise((resolve) => {
+	return new Promise((resolve, reject) => {
 		cb.__call(
 				"statuses_show_ID",
 				"id=" + tweetRoot.tweetID,
 				null, //use promises instead of callbacks
 				true //app_only_auth
 		).then((response) => {
-			if (response.reply.in_reply_to_status_id_str) {
-				recursiveReplySearch(response.reply.in_reply_to_status_id_str).then(resolve);
-			} else {
-				resolve();
+			try {
+				if (response.reply.in_reply_to_status_id_str) {
+					recursiveReplySearch(response.reply.in_reply_to_status_id_str).then(resolve).catch(reject);
+				} else {
+					resolve();
+				}
+			} catch (e) {
+				reject()
 			}
 		});
 	});
 }
 
 function recursiveSearch(parentTweet, screenName, sinceId, maxId) {
-	return new Promise((resolve) => {
+	return new Promise((resolve, reject) => {
 		let params = {q: "(to:" + screenName + ")", since_id: sinceId, count: 100};
 		if (maxId) {
 			params.max_id = maxId;
@@ -46,21 +50,25 @@ function recursiveSearch(parentTweet, screenName, sinceId, maxId) {
 				null, //use promises instead of callbacks
 				true //app_only_auth
 		).then((response) => {
-			let promises = [];
-			for (let tweet of response.reply.statuses) {
-				if (tweet.in_reply_to_status_id_str === parentTweet.tweetID) {
-					let newTweet = new Tweet(tweet.id_str, parentTweet);
-					parentTweet.children.push(newTweet);
-					promises.push(recursiveSearch(newTweet, tweet.user.screen_name, tweet.id_str));
+			try {
+				let promises = [];
+				for (let tweet of response.reply.statuses) {
+					if (tweet.in_reply_to_status_id_str === parentTweet.tweetID) {
+						let newTweet = new Tweet(tweet.id_str, parentTweet);
+						parentTweet.children.push(newTweet);
+						promises.push(recursiveSearch(newTweet, tweet.user.screen_name, tweet.id_str));
+					}
 				}
+				if (response.reply.search_metadata.next_results) {
+					const newMaxId = response.reply.search_metadata.next_results.substring(
+							response.reply.search_metadata.next_results.lastIndexOf("max_id=") + 7,
+							response.reply.search_metadata.next_results.lastIndexOf("&q="));
+					promises.push(recursiveSearch(parentTweet, screenName, sinceId, newMaxId));
+				}
+				Promise.all(promises).then(resolve).catch(reject);
+			} catch (e) {
+				reject();
 			}
-			if (response.reply.search_metadata.next_results) {
-				const newMaxId = response.reply.search_metadata.next_results.substring(
-						response.reply.search_metadata.next_results.lastIndexOf("max_id=") + 7,
-						response.reply.search_metadata.next_results.lastIndexOf("&q="));
-				promises.push(recursiveSearch(parentTweet, screenName, sinceId, newMaxId));
-			}
-			Promise.all(promises).then(resolve);
 		});
 	});
 }
@@ -121,12 +129,22 @@ window.onload = () => {
 			true //app_only_auth
 	).then((response) => {
 		let promises = [];
-		promises.push(recursiveSearch(tweetRoot, response.reply.user.screen_name, response.reply.id_str));
-		if (document.getElementById("showParents").checked && response.reply.in_reply_to_status_id_str) {
-			promises.push(recursiveReplySearch(response.reply.in_reply_to_status_id_str));
+		const auxDate = new Date(response.reply.created_at);
+		auxDate.setDate(new Date(response.reply.created_at).getDate() + 5);
+		if (auxDate > new Date()) {
+			promises.push(recursiveSearch(tweetRoot, response.reply.user.screen_name, response.reply.id_str));
+			if (document.getElementById("showParents").checked && response.reply.in_reply_to_status_id_str) {
+				promises.push(recursiveReplySearch(response.reply.in_reply_to_status_id_str));
+			}
+		} else {
+			document.getElementById("root").removeChild(document.getElementById("loading"));
+			const error = document.createElement("span");
+			error.textContent = "This app only accepts tweets less than 5 days old because of Twitter API limitations";
+			document.getElementById("root").appendChild(error);
 		}
 		return Promise.all(promises);
-	}).then(() => {
+	}).always(() => {
+		document.getElementById("root").removeChild(document.getElementById("loading"));
 		renderTweets(tweetRoot, createTweet(tweetRoot.tweetID));
 	});
 };
