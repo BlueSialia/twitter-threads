@@ -12,20 +12,22 @@
 <body>
 <div id='navbarDiv'>
 	<nav class="navbar">
-		<ul>
-			<li><label>TweetID:
-				<input id="tweetID" type="text">
-			</label></li>
-			<li><label>Show parents:
-				<input id="showParents" type="checkbox">
-			</label></li>
-			<li><label>Trim replies:
-				<input id="removeChildless" type="checkbox">
-			</label></li>
-			<li>
-				<button>Go</button>
-			</li>
-		</ul>
+		<form onsubmit="go()">
+			<ul>
+				<li><label>TweetID:
+					<input id="tweetID" type="text">
+				</label></li>
+				<li><label>Show parents:
+					<input id="showParents" type="checkbox">
+				</label></li>
+				<li><label>Trim replies:
+					<input id="removeChildless" type="checkbox">
+				</label></li>
+				<li>
+					<input type="submit" value="Go">
+				</li>
+			</ul>
+		</form>
 	</nav>
 </div>
 <div class="tree">

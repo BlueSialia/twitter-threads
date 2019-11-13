@@ -151,3 +151,9 @@ function setCredentials() {
 		cb.setBearerToken(localStorage.getItem("bearer_token"));
 	}
 }
+
+function go() {
+	window.location = "/index.html?tweetID=" + document.getElementById("tweetID").value +
+	"&showParents=" + document.getElementById("showParents").value +
+	"&removeChildless=" + document.getElementById("removeChildless").value;
+}
