@@ -142,3 +142,7 @@ button {
 button:hover {
 	background: #30588e;
 }
+
+.twitter-tweet {
+	max-width: 300px !important;
+}
